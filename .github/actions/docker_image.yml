@@ -1,0 +1,22 @@
+name: Docker Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    inputs:
+      image-name:
+        description: 'Name for the Docker image'
+        required: true
+        default: 'my-image-name'
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag ${{ inputs.image-name }}:$(date +%s)

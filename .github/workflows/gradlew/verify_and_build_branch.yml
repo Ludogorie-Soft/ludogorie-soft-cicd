@@ -1,0 +1,87 @@
+name: Build and test
+
+on: [push, pull_request]
+
+env:
+  service-name: ${{ github.event.inputs.service-name }}
+
+
+jobs:
+
+  Build-Service:
+    runs-on: [self-hosted, prd, vm, ubuntu-latest]
+
+    name: Build Service
+    inputs:
+      java-version:
+        description: "Java version"
+        required: true
+        default: "21"
+      java-distribution:
+        description: "Java distribution"
+        required: false
+        default: "temurin"
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Java
+      - uses: actions/setup-java@v3
+        with:
+          distribution: ${{ inputs.java-distribution }}
+          java-version: ${{ inputs.java-version }}
+          overwrite-settings: false
+          cache: gradle
+
+      - name: Build JAR
+        run: ./gradlew build
+
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/settings.gradle.kts') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      - name: Build and analyze
+        inputs:
+          sonar-project-key:
+            description: 'SonarQube Project Key'
+            required: true
+          github-token:
+            description: 'GitHub Token'
+            required: true
+            default: ${{ secrets.GITHUB_TOKEN }}
+          sonar-token:
+            description: 'SonarQube Token'
+            required: true
+            default: ${{ secrets.SONAR_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ inputs.github-token }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ inputs.sonar-token }}
+        run: |
+          ./gradlew sonarqube -Dsonar.projectKey=${{ inputs.sonar-project-key }} \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.login=${{ inputs.sonar-token }}
+
+      - name: Archive JAR
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.service-name }}.jar
+          path: build/libs/${{ env.service-name }}.jar
+          retention-days: 5
+
+      - name: Class Test Report
+        uses: dorny/test-reporter@0d00bb14cb0cc2c9b8985df6e81dd333188224e1
+        if: success() || failure()
+        with:
+          name: Class Tests
+          path: '**/build/test-results/test**/TEST-*.xml'
+          reporter: java-junit
