@@ -1,0 +1,1 @@
+# ludogorie-soft-cicd
