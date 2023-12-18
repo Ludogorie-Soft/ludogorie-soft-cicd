@@ -75,10 +75,10 @@ jobs:
           path: build/libs/${{ env.service-name }}.jar
           retention-days: 5
 
-      - name: Class Test Report
-        uses: dorny/test-reporter@0d00bb14cb0cc2c9b8985df6e81dd333188224e1
-        if: success() || failure()
-        with:
-          name: Class Tests
-          path: '**/build/test-results/test**/TEST-*.xml'
-          reporter: java-junit
+#      - name: Class Test Report
+#        uses: dorny/test-reporter@0d00bb14cb0cc2c9b8985df6e81dd333188224e1
+#        if: success() || failure()
+#        with:
+#          name: Class Tests
+#          path: '**/build/test-results/test**/TEST-*.xml'
+#          reporter: java-junit
